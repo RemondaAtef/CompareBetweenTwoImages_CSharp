@@ -1,2 +1,2 @@
-# CopareBetweenTwoImages_CSharp
+Windows Application using C#.
 find the percentage difference between the two images.
