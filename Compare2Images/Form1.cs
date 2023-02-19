@@ -32,52 +32,68 @@ namespace Compare2Images
             pictureBox2.Image = Image.FromFile(op2.FileName);
         }
 
+        public byte[,] ImageTo2dByte(Bitmap bmp)
+        {
+            try
+            {
+                int width = bmp.Width;
+                int height = bmp.Height;
+                BitmapData data = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+                byte[] bytes = new byte[height * data.Stride];
+                try
+                {
+                    System.Runtime.InteropServices.Marshal.Copy(data.Scan0, bytes, 0, bytes.Length);
+                }
+
+                finally
+                {
+                    bmp.UnlockBits(data);
+                }
+                byte[,] result = new byte[height, width];
+                for (int y = 0; y < height; ++y)
+                    for (int x = 0; x < width; ++x)
+                    {
+                        int offset = y * data.Stride + x * 3;
+                        result[y, x] = (byte)((bytes[offset + 0] + bytes[offset + 1] + bytes[offset + 2]) / 3);
+                    }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return new byte[0, 0];
+            }
+        }
+
+
         // if two images are identical return true , else return false
         private void Compare_Click(object sender, EventArgs e)
         {
-            //bool result = AbuEhabHelper.ImagesArea.CompareIamges(pictureBox1, pictureBox2);
-            //MessageBox.Show(result.ToString());         
-
-
+           
 
             Bitmap img1 = new Bitmap(pictureBox3.Image);
             Bitmap img2 = new Bitmap(pictureBox4.Image);
 
-            if (img1.Size != img2.Size)
+           
+            var x = ImageTo2dByte(img1);
+            var y = ImageTo2dByte(img2);
+
+
+            double Similarity = 0, difference = 0;
+            for (int i = 0; i < x.GetLength(0); i++)
             {
-                string result = ("Images are of different sizes");
-                // Console.Error.WriteLine("Images are of different sizes");
-                //return;
-
-                MessageBox.Show(result);
-            }
-
-            float diff = 0;
-
-            for (int y = 0; y < img1.Height; y++)
-            {
-                for (int x = 0; x < img1.Width; x++)
+                for (int j = 0; j < x.GetLength(1); j++)
                 {
-                    Color pixel1 = img1.GetPixel(x, y);
-                    Color pixel2 = img2.GetPixel(x, y);
-
-                    diff += Math.Abs(pixel1.R - pixel2.R);
-                    diff += Math.Abs(pixel1.G - pixel2.G);
-                    diff += Math.Abs(pixel1.B - pixel2.B);
+                    if (x[i, j] == y[i, j])
+                        Similarity++;
+                    else difference++;
                 }
             }
-            //string result1 = "Percentage difference between images: ";
-            //float result2 = 100 * (diff / 255) / (img1.Width * img1.Height * 3);
-            //string result3 = " %";
+            Similarity = (Similarity / (x.GetLength(0) * x.GetLength(1))) * 100;
+            difference = (difference / (x.GetLength(0) * x.GetLength(1))) * 100;
 
-            //MessageBox.Show((result1, result2, result3).ToString());
+            MessageBox.Show(("Percentage difference between images: ", difference, " %").ToString());
 
-            MessageBox.Show( ("Percentage difference between images: ", 100 * (diff / 255) / (img1.Width * img1.Height * 3), " %").ToString());
-            
-            
-            //   MessageBox.Show(result1.ToString())
 
-            //"diff: {0} %"
         }
 
         private void SelectArea1_Click(object sender, EventArgs e)
@@ -207,9 +223,6 @@ namespace Compare2Images
                 rectW2 = rectW;
                 rectH2 = rectH;
 
-                //rectW = e.X - crpX;
-                //rectH = e.Y - crpY;
-
                 Graphics g = pictureBox2.CreateGraphics();
                 g.DrawRectangle(crpPen, crpX, crpY, rectW2, rectH2);
                 g.Dispose();
@@ -218,8 +231,7 @@ namespace Compare2Images
         private void CropArea2_Click(object sender, EventArgs e)
         {
             label2.Text = "Dimensions :" + rectW2 + "," + rectH2;
-            //if (label2.Text == label1.Text)
-            //{
+           
                 Cursor = Cursors.Default;
                 //Now we will draw the cropped image into pictureBox4
                 Bitmap bmp2 = new Bitmap(pictureBox2.Width, pictureBox2.Height);
@@ -234,7 +246,7 @@ namespace Compare2Images
                         Color pxlclr2 = bmp2.GetPixel(crpX + i, crpY + y);
                         crpImg.SetPixel(i, y, pxlclr2);
                     }
-              //  }
+             
 
                 pictureBox4.Image = (Image)crpImg;
                 pictureBox4.SizeMode = PictureBoxSizeMode.CenterImage;
